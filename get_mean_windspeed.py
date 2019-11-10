@@ -9,6 +9,7 @@ from sqlite3 import Error
 import datetime
 import sys
 import pytz
+from math import tan, atan2, sin, cos, pi, radians, degrees
 
 def create_connection(db_file):
     """ create a database connection to the SQLite database
@@ -40,12 +41,29 @@ def select_all_tasks(conn, timestart, timeend):
     :return:
     """
     cur = conn.cursor()
-    cur.execute(f"SELECT avg(windSpeed),avg(windDir) FROM archive where dateTime >\
+    cur.execute(f"SELECT windSpeed,windDir FROM archive where dateTime >\
                   {timestart} and dateTime < {timeend}")
  
     rows = cur.fetchall()
  
     return rows
+
+def calc_aves(winds):
+    """Calculates vector average wind speeds from the list of tuples
+    """
+    #define east west and north south components
+    NS = 0.0
+    EW = 0.0
+    for item in winds:
+        #print(item[0] * cos(radians(item[1])))
+        NS += item[0] * cos(radians(item[1]))
+        #print(item[0] * sin(radians(item[1])))
+        EW += item[0] * sin(radians(item[1]))
+    
+    mag = (NS**2 + EW**2)**0.5 / len(winds)
+    ang = degrees(atan2(EW,NS))
+    return(mag,ang)
+
 
 def main():
 
@@ -71,8 +89,10 @@ def main():
     dbconn = create_connection(fname)
     rows = select_all_tasks(dbconn, userdate, userdateend)
     print(rows)
-    print(f"Race average wind speed: {rows[0][0]* knot_2_mile} knots")
-    print(f"Race average wind direction: {degrees_to_cardinal(rows[0][1])} ({rows[0][1]})")
+    results = calc_aves(rows)
+    print(results)
+    print(f"Race average wind speed: {results[0]* knot_2_mile} knots")
+    print(f"Race average wind direction: {degrees_to_cardinal(results[1])} ({results[1]})")
 
 
     
